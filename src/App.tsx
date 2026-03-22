@@ -1,17 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from './components/Header';
 import VideoInput from './components/VideoInput';
 import VideoPreview from './components/VideoPreview';
 import SummaryTabs from './components/SummaryTabs';
 import AskAI from './components/AskAI';
-import ApiKeyModal from './components/ApiKeyModal';
 import HistorySidebar, { type HistoryItem } from './components/HistorySidebar';
+import LoginScreen from './components/LoginScreen';
+import { auth, onAuthStateChanged } from './firebase';
 
 function App() {
   const [videoData, setVideoData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_key') || '');
-  const [showApiModal, setShowApiModal] = useState(!localStorage.getItem('gemini_key'));
   const [summaryData, setSummaryData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>(() => {
@@ -19,13 +18,18 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
   const [showHistory, setShowHistory] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [authChecking, setAuthChecking] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthChecking(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleSummarize = async (url: string) => {
-    if (!apiKey) {
-      setShowApiModal(true);
-      return;
-    }
-    
     setIsLoading(true);
     setError(null);
     setVideoData(null);
@@ -37,15 +41,24 @@ function App() {
       const response = await fetch('/api/summarize', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ url })
       });
 
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Failed to process video');
+        let errorMessage = 'Failed to process video';
+        try {
+          // Vercel might return HTML string or empty body on 500
+          const textData = await response.text();
+          if (textData) {
+            const errData = JSON.parse(textData);
+            errorMessage = errData.error || errorMessage;
+          }
+        } catch(e) {
+          console.error("Failed to parse error response", e);
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -70,18 +83,28 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  const handleSaveKey = (key: string) => {
-    setApiKey(key);
-    localStorage.setItem('gemini_key', key);
-    setShowApiModal(false);
-  };
+  if (authChecking) {
+    return (
+      <div className="app-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+        <div className="loader" style={{ width: '40px', height: '40px' }}></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="app-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', margin: 0, width: '100vw', maxWidth: '100%' }}>
+        <LoginScreen onLoginSuccess={() => {}} />
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">
       <Header 
-        onSettingsClick={() => setShowApiModal(true)} 
+        user={user}
         onHistoryClick={() => setShowHistory(true)} 
       />
       
@@ -103,7 +126,7 @@ function App() {
             <div className="grid-layout">
               <div className="left-panel">
                 <VideoPreview isLoading={isLoading} data={videoData} />
-                {videoData && <AskAI videoId={videoData.id} apiKey={apiKey} />}
+                {videoData && <AskAI videoId={videoData.id} />}
               </div>
               <div className="right-panel">
                 <SummaryTabs isLoading={isLoading} data={summaryData} transcript={videoData?.transcript} />
@@ -112,14 +135,6 @@ function App() {
           </section>
         )}
       </main>
-
-      {showApiModal && (
-        <ApiKeyModal 
-          onSave={handleSaveKey} 
-          onClose={() => apiKey ? setShowApiModal(false) : null} 
-          hasKey={!!apiKey} 
-        />
-      )}
 
       <HistorySidebar 
         history={history} 

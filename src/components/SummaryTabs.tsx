@@ -47,17 +47,25 @@ const SummaryTabs: React.FC<SummaryTabsProps> = ({ isLoading, data, transcript }
     
     setIsGeneratingTwitter(true);
     try {
-      const apiKey = localStorage.getItem('gemini_key');
       const response = await fetch('/api/twitter', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ videoId: data.id })
       });
 
-      if (!response.ok) throw new Error('Failed to generate thread');
+      if (!response.ok) {
+        let errorMessage = 'Failed to generate thread';
+        try {
+          const textData = await response.text();
+          if (textData) {
+            const errData = JSON.parse(textData);
+            errorMessage = errData.error || errorMessage;
+          }
+        } catch(e) { /* ignore */ }
+        throw new Error(errorMessage);
+      }
       
       const result = await response.json();
       setTwitterThread(result.thread);

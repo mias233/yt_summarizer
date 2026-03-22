@@ -23,13 +23,7 @@ const cache = new Map();
 app.post('/api/summarize', async (req, res) => {
   try {
     const { url } = req.body;
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Gemini API key missing' });
-    }
-    
-    const apiKey = authHeader.split(' ')[1];
+    const apiKey = "AIzaSyABmj1hsFO2S6HNZZLGLjtyTVlYkEmBQis";
     const videoId = extractVideoId(url);
     
     if (!videoId) {
@@ -135,13 +129,7 @@ app.post('/api/summarize', async (req, res) => {
 app.post('/api/chat', async (req, res) => {
   try {
     const { videoId, question } = req.body;
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Gemini API key missing' });
-    }
-    
-    const apiKey = authHeader.split(' ')[1];
+    const apiKey = "AIzaSyABmj1hsFO2S6HNZZLGLjtyTVlYkEmBQis";
     const transcript = cache.get(videoId);
 
     if (!transcript) {
@@ -172,13 +160,7 @@ app.post('/api/chat', async (req, res) => {
 app.post('/api/twitter', async (req, res) => {
   try {
     const { videoId } = req.body;
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Gemini API key missing' });
-    }
-    
-    const apiKey = authHeader.split(' ')[1];
+    const apiKey = "AIzaSyABmj1hsFO2S6HNZZLGLjtyTVlYkEmBQis";
     const transcript = cache.get(videoId);
 
     if (!transcript) {

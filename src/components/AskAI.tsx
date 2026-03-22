@@ -3,10 +3,9 @@ import { Send, Bot, User, Loader2 } from 'lucide-react';
 
 interface AskAIProps {
   videoId: string;
-  apiKey: string;
 }
 
-const AskAI: React.FC<AskAIProps> = ({ videoId, apiKey }) => {
+const AskAI: React.FC<AskAIProps> = ({ videoId }) => {
   const [messages, setMessages] = useState<{role: 'user'|'ai', text: string}[]>([
     { role: 'ai', text: "Ask me anything about this video!" }
   ]);
@@ -24,7 +23,7 @@ const AskAI: React.FC<AskAIProps> = ({ videoId, apiKey }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !apiKey) return;
+    if (!input.trim()) return;
 
     const userMessage = input.trim();
     setInput('');
@@ -35,8 +34,7 @@ const AskAI: React.FC<AskAIProps> = ({ videoId, apiKey }) => {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ videoId, question: userMessage })
       });
